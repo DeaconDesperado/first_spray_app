@@ -1,20 +1,21 @@
 package com.hello
 import akka.actor._
 import akka.routing.RoundRobinRouter
-//import akka.util.Duration
-//import akka.util.duration._
-
+import scala.math.random
+import scala.concurrent.duration._
 
 sealed trait PiMessage
 case object Calculate extends PiMessage
 case class Work(start:Int, nrOfElements:Int) extends PiMessage
 case class Result(value:Double) extends PiMessage
+case class Scream(foo:String) extends PiMessage
 case class PiApproximation(pi:Double)
 
 class Worker extends Actor {
   def receive = {
     case Work(start,nrOfElements)=>
       sender ! Result(calculatePiFor(start,nrOfElements))
+      sender ! Scream("HELLO")
   }
 
   def calculatePiFor(start:Int,nrOfElements:Int): Double = {
@@ -25,7 +26,8 @@ class Worker extends Actor {
   }
 }
 
-class Master(nrOfWorkers:Int, nrOfMessages:Int, nrOfElements:Int, listener:ActorRef) extends Actor{
+class Master(nrOfWorkers:Int, nrOfMessages:Int, nrOfElements:Int, listener:ActorRef) extends Actor {
+
   var pi: Double = _
   var nrOfResults: Int = _
   var start: Long = System.currentTimeMillis
@@ -35,6 +37,8 @@ class Master(nrOfWorkers:Int, nrOfMessages:Int, nrOfElements:Int, listener:Actor
   def receive = {
     case Calculate =>
       for(i <- 0 until nrOfMessages) workerRouter ! Work(i * nrOfElements, nrOfElements)
+    case Scream(foo) =>
+      //println(foo)
     case Result(value) =>
       pi += value
       nrOfResults += 1
@@ -45,7 +49,7 @@ class Master(nrOfWorkers:Int, nrOfMessages:Int, nrOfElements:Int, listener:Actor
   }
 }
 
-class Listener extends Actor{
+class Listener extends Actor {
   def receive = {
     case PiApproximation(pi) =>
       println("\n\tPi approximation: \t\t%s\n\t".format(pi))
@@ -53,7 +57,7 @@ class Listener extends Actor{
   }
 }
 
-object Pi{
+object Pi {
   def main(args:Array[String]){
     calculate(nrOfWorkers=4, nrOfElements=10000, nrOfMessages=1000)
   }
